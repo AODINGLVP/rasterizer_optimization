@@ -3,12 +3,13 @@
 #include <iostream>
 #include <vector>
 #include "vec4.h"
-
+#include <immintrin.h>
+using namespace std;
 // Matrix class for 4x4 transformation matrices
 class matrix {
     union {
-        float m[4][4]; // 2D array representation of the matrix
-        float a[16];   // 1D array representation of the matrix for linear access
+        alignas(16) float m[4][4]; // 2D array representation of the matrix
+        alignas(16) float a[16];   // 1D array representation of the matrix for linear access
     };
 
 public:
@@ -35,10 +36,16 @@ public:
     // Returns the resulting transformed vec4
     vec4 operator * (const vec4& v) const {
         vec4 result;
-        result[0] = a[0] * v[0] + a[1] * v[1] + a[2] * v[2] + a[3] * v[3];
-        result[1] = a[4] * v[0] + a[5] * v[1] + a[6] * v[2] + a[7] * v[3];
-        result[2] = a[8] * v[0] + a[9] * v[1] + a[10] * v[2] + a[11] * v[3];
-        result[3] = a[12] * v[0] + a[13] * v[1] + a[14] * v[2] + a[15] * v[3];
+		__m128 value = _mm_loadu_ps(v.v);
+		__m128 row0 = _mm_loadu_ps(&a[0]);
+		__m128 row1 = _mm_loadu_ps(&a[4]);
+		__m128 row2 = _mm_loadu_ps(&a[8]);
+		__m128 row3 = _mm_loadu_ps(&a[12]);
+		result.v[0] = _mm_cvtss_f32(_mm_dp_ps(row0, value, 0xF1));//dot product 
+		result.v[1] = _mm_cvtss_f32(_mm_dp_ps(row1, value, 0xF1));
+		result.v[2] = _mm_cvtss_f32(_mm_dp_ps(row2, value, 0xF1));
+		result.v[3] = _mm_cvtss_f32(_mm_dp_ps(row3, value, 0xF1));
+       
         return result;
     }
 

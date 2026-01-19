@@ -92,6 +92,12 @@ public:
     T interpolate(float alpha, float beta, float gamma, T a1, T a2, T a3) {
         return (a1 * alpha) + (a2 * beta) + (a3 * gamma);
     }
+    template <typename T>
+    T compute_incremental_interpolate(float x0, float x1, float y0, float y1, float x2, float y2, T v0, T v1, T v2, float invarea, T& dvdx, T& dvdy) {
+        dvdx = (v0 * (y1 - y2) + v1 * (y2 - y0) + v2 * (y0 - y1)) * invarea;
+        dvdy = (v0 * (x2 - x1) + v1 * (x0 - x2) + v2 * (x1 - x0)) * invarea;
+        return dvdx;
+    }
     static vec4 makeEdge(const vec4& a, const vec4& b) {
         vec4 e(0,0,0,0);
         e.x = a.y - b.y;
@@ -108,6 +114,19 @@ public:
     // - L: Light object for shading calculations
     // - ka, kd: Ambient and diffuse lighting coefficients
     void draw(Renderer& renderer, Light& L, float ka, float kd) {
+
+
+        if (area < 1.f) return;
+        float area2 = (v[1].p.x - v[0].p.x) * (v[2].p.y - v[0].p.y) - (v[1].p.y - v[0].p.y) * (v[2].p.x - v[0].p.x);
+        if (area2 < 0.0f) {
+            //std::swap(v[1], v[2]);
+            area2 = -area2;
+        }
+
+
+        float invArea = 1.0f / area2;
+        float invArea2 = 1.0f / area2;
+
         int W = renderer.canvas.getWidth();
         int H = renderer.canvas.getHeight();
 
@@ -119,10 +138,13 @@ public:
         int maxX = clamp((int)std::ceil(maxV.x), 0, W - 1);
         int maxY = clamp((int)std::ceil(maxV.y), 0, H - 1);
 
-                   
-        if (area < 1.f) return;
-       
-        float invArea = 1.0f / area;
+    
+		float dzdx, dzdy;
+		compute_incremental_interpolate(v[0].p.x, v[1].p.x, v[0].p.y, v[1].p.y, v[2].p.x, v[2].p.y, v[0].p.z, v[1].p.z, v[2].p.z, invArea, dzdx, dzdy);
+		colour dcdx, dcdy;
+		compute_incremental_interpolate(v[0].p.x, v[1].p.x, v[0].p.y, v[1].p.y, v[2].p.x, v[2].p.y, v[0].rgb, v[1].rgb, v[2].rgb, invArea, dcdx, dcdy);
+		vec4 dndx, dndy;
+		compute_incremental_interpolate(v[0].p.x, v[1].p.x, v[0].p.y, v[1].p.y, v[2].p.x, v[2].p.y, v[0].normal, v[1].normal, v[2].normal, invArea, dndx, dndy);
 
         vec4 e0 = makeEdge(v[1].p, v[2].p); // (A,B,C)
         vec4 e1 = makeEdge(v[2].p, v[0].p);
@@ -141,9 +163,17 @@ public:
         float w0_block = e0.x * 8;      
         float w1_block = e1.x * 8;
         float w2_block = e2.x * 8;
-        float alpha;
-        float beta ;
-        float gamma;
+
+		float alpha, beta, gamma;
+        float alpha0 = row_w0 * invArea;
+        float beta0 = row_w1 * invArea;
+        float gamma0 = row_w2 * invArea;
+        float z_row = v[0].p.z * alpha0 + v[1].p.z * beta0 + v[2].p.z * gamma0;
+        colour c_row = v[0].rgb * alpha0 + v[1].rgb * beta0 + v[2].rgb * gamma0;
+        vec4 n_row = v[0].normal * alpha0 + v[1].normal * beta0 + v[2].normal * gamma0;
+
+
+
         L.omega_i.normalise(); // 只做一次
         __m256 zero = _mm256_setzero_ps();
         alignas(32)float w0[8] = { row_w0 ,row_w0 + w0_stepx * 1,row_w0 + w0_stepx * 2,row_w0 + w0_stepx * 3,row_w0 + w0_stepx * 4,row_w0 + w0_stepx * 5,row_w0 + w0_stepx * 6,row_w0 + w0_stepx * 7 };
@@ -169,7 +199,9 @@ public:
             __m256 w2_stepx_v = _mm256_set1_ps(w2_block);
 
 
-
+            colour col = c_row;
+            float z = z_row;
+            vec4 nor = n_row;
            
             for (int x = minX; x <= maxX; x+=8) {
                
@@ -195,18 +227,20 @@ public:
                     
 
                    
-                    if (w0[i] >= 0.f && w1[i] >= 0.f && w2[i] >= 0.f) {
+                   
 
-                        alpha = w0[i] * invArea;
-                        beta = w1[i] * invArea;
-                        gamma = w2[i] * invArea;
-
-                        float depth = interpolate(alpha, beta, gamma, v[0].p[2], v[1].p[2], v[2].p[2]);
+                        //alpha = w0[i] * invArea;
+                        //beta = w1[i] * invArea;
+                        //gamma = w2[i] * invArea;
+                        float depth = z+ dzdx * i;
+                        //float depth = interpolate(alpha, beta, gamma, v[0].p[2], v[1].p[2], v[2].p[2]);
 
                         if (renderer.zbuffer(x+i, y) > depth && depth > 0.001f) {
-                            colour c = interpolate(alpha, beta, gamma, v[0].rgb, v[1].rgb, v[2].rgb);
+                            //colour c = interpolate(alpha, beta, gamma, v[0].rgb, v[1].rgb, v[2].rgb);
+                            colour c = col + dcdx * i;
                             c.clampColour();
-                            vec4 normal = interpolate(alpha, beta, gamma, v[0].normal, v[1].normal, v[2].normal);
+                          // vec4 normal = interpolate(alpha, beta, gamma, v[0].normal, v[1].normal, v[2].normal);
+							vec4 normal = nor+ dndx * i;
                             normal.normalise();
 
                             float dot = std::max(vec4::dot(L.omega_i, normal), 0.0f);
@@ -217,16 +251,22 @@ public:
                             renderer.canvas.draw(x+i, y, r, g, b);
                             renderer.zbuffer(x+i, y) = depth;
                         }
-                    }
+                    
                 }
 					w0_vec = _mm256_add_ps(w0_vec, w0_stepx_v);
 					w1_vec = _mm256_add_ps(w1_vec, w1_stepx_v);
 					w2_vec = _mm256_add_ps(w2_vec, w2_stepx_v);
+                    z += dzdx*8;
+                    col = col + dcdx * 8;
+                    nor = nor + dndx * 8;
                     
                 
                 
             }
             row_w0 += w0_stepy; row_w1 += w1_stepy; row_w2 += w2_stepy;
+            z_row += dzdy;
+            c_row = c_row + dcdy;
+            n_row = n_row + dndy;
         }
     }
 

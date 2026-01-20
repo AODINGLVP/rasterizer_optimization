@@ -193,7 +193,7 @@ public:
             __m256 w1_stepx_v = _mm256_set1_ps(w1_block);
             __m256 w2_stepx_v = _mm256_set1_ps(w2_block);
 
-			zrow = y * renderer.zbuffer.width;
+			
             colour col = c_row;
             float z = z_row;
             vec4 nor = n_row;
@@ -271,8 +271,8 @@ public:
                                     unsigned char r, g, b;
                                     a.toRGB(r, g, b);
                                     renderer.canvas.draw(x + i, y, r, g, b);
-                                    //renderer.zbuffer(x + i, y) = depth;
-                                    renderer.zbuffer.buffer[zrow + x] = depth;//release will do something in the version
+                                    renderer.zbuffer(x + i, y) = depth;
+                                   
                                 }
                             }
                         }

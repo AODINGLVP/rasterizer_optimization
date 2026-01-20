@@ -7,12 +7,13 @@
 using namespace std;
 // Matrix class for 4x4 transformation matrices
 class matrix {
+public:
     union {
         alignas(16) float m[4][4]; // 2D array representation of the matrix
         alignas(16) float a[16];   // 1D array representation of the matrix for linear access
     };
 
-public:
+
     // Default constructor initializes the matrix as an identity matrix
     matrix() {
         identity();

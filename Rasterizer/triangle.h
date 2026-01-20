@@ -294,6 +294,10 @@ public:
             n_row = n_row + dndy;
         }
     }
+    auto EdgeFunction(float xa, float ya, float xb, float yb, float x, float y) {
+        return (x - xa) * (yb - ya) - (y - ya) * (xb - xa);
+    }
+   
 
     void draw_with_depth_vector(Renderer& renderer, Light& L, float ka, float kd) {//not good
 

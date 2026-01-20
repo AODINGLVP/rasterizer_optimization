@@ -29,7 +29,13 @@ void render(Renderer& renderer, Mesh* mesh, matrix& camera, Light& L) {
     // Iterate through all triangles in the mesh
     for (triIndices& ind : mesh->triangles) {
         Vertex t[3]; // Temporary array to store transformed triangle vertices
-
+       
+        
+        //back-face culling
+        if (vec4::dot(mesh->world * mesh->vertices[ind.v[0]].normal, mesh->world * mesh->vertices[ind.v[0]].p - vec4(0.0f, 0.0f, -camera.a[11], 1.0f)) >= 0.0f) continue;
+        
+        
+        
         // Transform each vertex of the triangle
         for (unsigned int i = 0; i < 3; i++) {
             t[i].p = p * mesh->vertices[ind.v[i]].p; // Apply transformations

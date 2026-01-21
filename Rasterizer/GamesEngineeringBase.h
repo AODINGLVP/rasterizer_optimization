@@ -518,23 +518,13 @@ namespace GamesEngineeringBase
 		void draw(int x, int y, float r[8], float g[8], float b[8])
 		{
 			int index = ((y * width) + x) * 3;
-
-			for(int i=0; i < 8; i++)
-			{
-				image[index+i*3] = static_cast<unsigned char>(r[i]) ;
-				
+			int p;
+			for (int i = 0; i < 8; i++) {
+				 p = index + i * 3;
+				image[p + 0] = (unsigned char)r[i];
+				image[p + 1] = (unsigned char)g[i];
+				image[p + 2] = (unsigned char)b[i];
 			}
-			for (int i = 0; i < 8; i++)
-			{
-				image[index + i * 3+1] = static_cast<unsigned char>(g[i]);
-
-			}
-			for (int i = 0; i < 8; i++)
-			{
-				image[index + i * 3 + 2] = static_cast<unsigned char>( b[i]);
-
-			}
-			
 		}
 
 		// Draws a pixel at the specified pixel index with the given RGB color

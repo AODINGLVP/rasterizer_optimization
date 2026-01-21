@@ -435,6 +435,8 @@ public:
 
 
                                 int realmask = _mm256_movemask_ps(_mm256_and_ps(inside, inside_depth));
+
+                                /*
                                 alignas(32) float a_r[8];
                                 alignas(32) float a_g[8];
                                 alignas(32) float a_b[8];
@@ -460,9 +462,11 @@ public:
                                     renderer.zbuffer(x + i, y) = depth_end;
 
 
-                                }
-                                /*
+                                }*/
+                                
                                 if (realmask == 0xFF) {
+
+                                   
                                     alignas(32) float a_r[8];
                                     alignas(32) float a_g[8];
                                     alignas(32) float a_b[8];
@@ -478,19 +482,18 @@ public:
 
                                     
 									renderer.canvas.draw(x, y, a_r, a_g, a_b);
-                                    alignas(32) float depth_8f[8];
-                                    _mm256_store_ps(depth_8f, depth_v);
-                                    for(int i=0;i<8;i++)
-                                    {
-                                       
-                                        renderer.zbuffer(x + i, y) = depth_8f[i];
-									}
+                                   
+                                    _mm256_store_ps(&renderer.zbuffer(x , y), depth_v);
+                                    
                                 }
                                 else {
 
                                     alignas(32) float a_r[8];
                                     alignas(32) float a_g[8];
                                     alignas(32) float a_b[8];
+                                     a_vr = _mm256_mul_ps(twofivefive, a_vr);
+									a_vg = _mm256_mul_ps(twofivefive, a_vg);
+									a_vb = _mm256_mul_ps(twofivefive, a_vb);
                                     _mm256_store_ps(a_r, a_vr);
                                     _mm256_store_ps(a_g, a_vg);
                                     _mm256_store_ps(a_b, a_vb);
@@ -504,9 +507,9 @@ public:
                                     while (realmask) {
                                         int i = _tzcnt_u32(realmask);
                                         realmask &= (realmask - 1);
-                                        r = a_r[i] * 255;
-                                        g = a_g[i] * 255;
-                                        b = a_b[i] * 255;
+                                        r = a_r[i] ;
+                                        g = a_g[i] ;
+                                        b = a_b[i] ;
                                         depth_end = depth_8f[i];
 
                                         renderer.canvas.draw(x + i, y, r, g, b);
@@ -514,7 +517,7 @@ public:
 
 
                                     }
-                                }*/
+                                }
                               
 
 

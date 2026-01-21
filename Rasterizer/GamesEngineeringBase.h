@@ -518,12 +518,12 @@ namespace GamesEngineeringBase
 		void draw(int x, int y, float r[8], float g[8], float b[8])
 		{
 			int index = ((y * width) + x) * 3;
-			int p;
+			//int p;
 			for (int i = 0; i < 8; i++) {
-				 p = index + i * 3;
-				image[p + 0] = (unsigned char)r[i];
-				image[p + 1] = (unsigned char)g[i];
-				image[p + 2] = (unsigned char)b[i];
+				// p = index + i * 3;
+				image[index++] = (unsigned char)r[i];
+				image[index++] = (unsigned char)g[i];
+				image[index++] = (unsigned char)b[i];
 			}
 		}
 

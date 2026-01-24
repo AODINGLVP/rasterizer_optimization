@@ -124,7 +124,7 @@ private:
 				for (int i = 0; i<tile_count; i++) {
                     expected = -1;
                     if(produce_done){
-                        std::lock_guard<std::mutex> lock(empty_check_mtx);
+                        //std::lock_guard<std::mutex> lock(empty_check_mtx);
                         if(tiles[i].taskQueue.empty())
                         continue;
                         else

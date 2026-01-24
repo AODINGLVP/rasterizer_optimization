@@ -376,7 +376,7 @@ void multil_scene3() {
 
     bool running = true;
 	MultilThreadControl *scv = new MultilThreadControl();
-    scv->start(6);
+    scv->start(10);
 	int tilenumber = 16;
     //bool show = 0;
     while (running) {

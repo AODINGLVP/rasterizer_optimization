@@ -52,9 +52,10 @@ public:
     std::mutex mtx;
     std::condition_variable cv;
     bool stop = false;
-	//bool is_empty = false;
+	std::atomic<bool> is_empty = true;
 
     bool try_push(const TileWork& v) {
+        is_empty = false;
         std::lock_guard<std::mutex> lock(mtx);
         taskQueue.push(v);
         return true;
@@ -79,6 +80,7 @@ public:
 class MultilThreadControl
 {
 	public:
+		std::mutex empty_check_mtx;
         std::atomic<bool> massion_downe = false;
 		std::atomic<int>active_workers=0;
        // A* a = new A[size];
@@ -115,9 +117,19 @@ private:
 		int expected = -1;
 		while (true)
 		{
-			
+            while (massion_downe) {
+
+            }
+            bool should_end = true;
 				for (int i = 0; i<tile_count; i++) {
                     expected = -1;
+                    if(produce_done){
+                        std::lock_guard<std::mutex> lock(empty_check_mtx);
+                        if(tiles[i].taskQueue.empty())
+                        continue;
+                        else
+							should_end = false;
+					}
 					if (tiles[i].owner.compare_exchange_weak(expected, tid, std::memory_order_acq_rel)) {
 						active_workers++;
 
@@ -133,29 +145,19 @@ private:
                                 mission.w0_stepy, mission.w1_stepy, mission.w2_stepy, mission.dzdy, mission.dcdy, mission.dndy,
 								mission.ka, mission.kd,mission.light);
 						}
+						tiles[i].is_empty = true;
                         tiles[i].owner.store(-1, std::memory_order_release);
 						active_workers--;
 
-						//break;
-					}
-				}
-			
-				if (produce_done && active_workers == 0) {
-					bool all_empty = true;
-					for (int i = 0; i < tile_count; i++) {
-						if (!tiles[i].taskQueue.empty()) {
-							all_empty = false;
-						}
-					}
 						
-					if (all_empty) {
-						massion_downe = true;
-						//produce_done = false;
-
 					}
-							
-							
 				}
+                if (should_end) {
+                    if (active_workers == 0 && produce_done) {
+                        massion_downe = true;
+                    }
+            }
+            
 
 		}
 	}

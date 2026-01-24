@@ -376,12 +376,11 @@ void multil_scene3() {
 
     bool running = true;
 	MultilThreadControl *scv = new MultilThreadControl();
-    scv->start(4);
-	int tilenumber = 8;
+    scv->start(6);
+	int tilenumber = 16;
     //bool show = 0;
     while (running) {
-        scv->massion_downe = false;
-		scv->produce_done = false;
+     
         Renderer::instance().canvas.checkInput();
         Renderer::instance().clear();
 
@@ -411,10 +410,18 @@ void multil_scene3() {
             scv->tiles[i].owner.store(-1, std::memory_order_relaxed);
 			scv->numThreads = 8;
         }
+        scv->massion_downe = false;
+        scv->produce_done = false;
         for (auto& m : scene)
             render(Renderer::instance(), m, camera, L,scv,tilenumber);
 
         scv->produce_done = true;
+        int tilessizenumber = 0;
+        for(int i=0;i<tilenumber;i++){
+
+            tilessizenumber += scv->tiles[i].taskQueue.size();
+		}
+		//cout << "tile size number:" << tilessizenumber << endl;
         while (!scv->massion_downe) {
             int scsccc = 1;
 			//scv->tiles.clear();

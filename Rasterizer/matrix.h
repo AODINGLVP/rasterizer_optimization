@@ -156,7 +156,34 @@ public:
     // - x, y, z: Rotation angles in radians around each axis
     // Returns the composite rotation matrix
     static matrix makeRotateXYZ(float x, float y, float z) {
-        return matrix::makeRotateX(x) * matrix::makeRotateY(y) * matrix::makeRotateZ(z);
+        float sx = sinf(x), cx = cosf(x);
+    float sy = sinf(y), cy = cosf(y);
+    float sz = sinf(z), cz = cosf(z);
+
+    matrix m;
+
+    // R = Rz * Ry * Rx （常用约定）
+    m.a[0]  =  cy * cz;
+    m.a[1]  =  cy * sz;
+    m.a[2]  = -sy;
+    m.a[3]  =  0.0f;
+
+    m.a[4]  =  sx * sy * cz - cx * sz;
+    m.a[5]  =  sx * sy * sz + cx * cz;
+    m.a[6]  =  sx * cy;
+    m.a[7]  =  0.0f;
+
+    m.a[8]  =  cx * sy * cz + sx * sz;
+    m.a[9]  =  cx * sy * sz - sx * cz;
+    m.a[10] =  cx * cy;
+    m.a[11] =  0.0f;
+
+    m.a[12] =  0.0f;
+    m.a[13] =  0.0f;
+    m.a[14] =  0.0f;
+    m.a[15] =  1.0f;
+
+    return m;
     }
 
     // Create a scaling matrix

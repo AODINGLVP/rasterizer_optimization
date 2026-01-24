@@ -379,9 +379,20 @@ void multil_scene3() {
     scv->start(6);
 	int tilenumber = 16;
     std::jthread for_produce;
+	double fenfa_count_time = 0.0;
+	double chule_count_time = 0.0;
+	double qianqian_time = 0.0;
     //bool show = 0;
+
+
+
+
     while (running) {
-     
+
+
+
+
+        auto star3 = std::chrono::high_resolution_clock::now();
         Renderer::instance().canvas.checkInput();
         Renderer::instance().clear();
 
@@ -392,39 +403,82 @@ void multil_scene3() {
         // Move the sphere back and forth
         sphereOffset += sphereStep;
         sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
+
+
+
+
+
+
+
         if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
             sphereStep *= -1.f;
             if (++cycle % 2 == 0) {
                 end = std::chrono::high_resolution_clock::now();
                 std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
                 start = std::chrono::high_resolution_clock::now();
+
+				std::cout << "fenfa_count_time :" << fenfa_count_time << "ms\n";
+				fenfa_count_time = 0.0;
+				std::cout << "chule_count_time :" << chule_count_time << "ms\n";
+				chule_count_time = 0.0;
+				std::cout << "qianqian_time :" << qianqian_time << "ms\n";
+				qianqian_time = 0.0;
             }
         }
 
         if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
 		scv->setTileCount(tilenumber);
-        //scv->tiles.reserve(tilenumber);
-		//scv->tiles.resize(tilenumber);
+      
         for (int i = 0; i < tilenumber; i++) {
 			//scv->tiles.push_back(SPSCQueue());
 			scv->tiles[i].taskQueue = std::queue<TileWork>();
-            scv->tiles[i].owner.store(-1, std::memory_order_relaxed);
+          
 			scv->numThreads = 6;
         }
       
-        scv->produce_done = false;
+       
+        auto end3 = std::chrono::high_resolution_clock::now();
+		qianqian_time += std::chrono::duration<double, std::milli>(end3 - star3).count();
+
+
+
+
+
+
+
+
+
+
+
+        auto star1 = std::chrono::high_resolution_clock::now();
         for (auto& m : scene) {
             render(Renderer::instance(), m, camera, L, scv, tilenumber);
             
         }
-
+        auto end1 = std::chrono::high_resolution_clock::now();
+		fenfa_count_time += std::chrono::duration<double, std::milli>(end1 - star1).count();
         scv->produce_done = true;
 
+        //scv->start();
+
+
+
+
+
+
+
+
+
+
+
+
+        auto star2 = std::chrono::high_resolution_clock::now();
         int tilessizenumber = 0;
         for (int i = 0; i < tilenumber; i++) {
 
             tilessizenumber += scv->tiles[i].taskQueue.size();
         }
+       
         //cout << "tile size number:" << tilessizenumber << endl;
         while (1) {
             for (int i = 0; i < tilenumber; i++) {
@@ -449,9 +503,10 @@ void multil_scene3() {
         }
         
      
-      
+        //scv->stop_workers();
         Renderer::instance().present();
-          
+        auto end2 = std::chrono::high_resolution_clock::now();
+        chule_count_time += std::chrono::duration<double, std::milli>(end2 - star2).count();
 	
     }
 

@@ -98,6 +98,7 @@ class MultilThreadControl
 		
 	}
 	void start(int n=10) {
+        numThreads=n;
 		scv.reserve(n);
 		for (int i = 0; i < n; i++)
 		{
@@ -107,6 +108,7 @@ class MultilThreadControl
 		}
         
 	}
+  
 	void setTileCount(int n) {
         tile_count = n;
 	}

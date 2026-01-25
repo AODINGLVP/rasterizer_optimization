@@ -110,7 +110,7 @@ public:
     // - renderer: Renderer object for drawing
     // - L: Light object for shading calculations
     // - ka, kd: Ambient and diffuse lighting coefficients
-    void draw(Renderer& renderer, Light& L, float ka, float kd,MultilThreadControl* scv=nullptr,int tilenumber=8) {
+    void draw(Renderer& renderer, Light& L, float ka, float kd, std::vector<int>& tile_splite,MultilThreadControl* scv=nullptr,int tilenumber=8) {
 
 
         if (area < 1.f) return;
@@ -258,10 +258,10 @@ public:
         __m256 zeor_dot_oneoneone = _mm256_set1_ps(0.001f);
 		__m256 twofivefive = _mm256_set1_ps(255.0f);
         int miny, maxy;
-        int row_space = H / tilenumber;
-		int row_remainder = H % tilenumber;
+        //int row_space = H / tilenumber;
+		//int row_remainder = H % tilenumber;
 		TileWork work;
-        // ---- 关键：把“行起始值”按 ydifferent 偏移到 tile 的第一行 ----
+      
         work.row_w0 = row_w0;
         work.row_w1 = row_w1;
         work.row_w2 = row_w2;
@@ -270,7 +270,7 @@ public:
         work.c_row = c_row;
         work.n_row = n_row;
 
-        // ---- x 方向步进向量/块步进向量（不随 y 变）----
+       
         work.w0_step_vx_256 = w0_step_vx_256;
         work.w1_step_vx_256 = w1_step_vx_256;
         work.w2_step_vx_256 = w2_step_vx_256;
@@ -298,7 +298,7 @@ public:
         work.dndx_block_vy = dndx_block_vy;
         work.dndx_block_vz = dndx_block_vz;
 
-        // ---- y 方向标量步进（用于每行更新）----
+      
         work.w0_stepy = w0_stepy;
         work.w1_stepy = w1_stepy;
         work.w2_stepy = w2_stepy;
@@ -311,12 +311,18 @@ public:
         work.kd = kd;
         work.renderer = &Renderer::instance();
         work.light = L;
-
+        int tile_minY;
+        int tile_maxY;
         for (int i = 0; i < tilenumber; i++) {
-			int tile_minY = i * row_space;
-			int tile_maxY = (i + 1) * row_space;
-			if (i == tilenumber - 1) 
-				tile_maxY += row_remainder;
+            int tile_minY = tile_splite[i];
+            int tile_maxY = tile_splite[i + 1]-1;
+			
+            if (i == tilenumber - 1) {
+                tile_maxY = 768;
+            }
+           
+			 
+			
             if(tile_maxY <=minY || tile_minY >= maxY)
 				continue;
 

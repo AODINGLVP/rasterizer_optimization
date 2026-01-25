@@ -9,6 +9,7 @@
 #include <mutex>
 #include <atomic>
 #include <queue>
+#include <chrono>
 struct alignas(64) TileFlag {
 	std::atomic<bool> free;
 };
@@ -80,6 +81,7 @@ public:
 class MultilThreadControl
 {
 	public:
+        std::vector<double> tile_draw_number;
         std::atomic<int> stop_flag = 0;
 		std::mutex tex;
 		std::atomic<bool> one_done = false;
@@ -101,9 +103,11 @@ class MultilThreadControl
 	void start(int n=10) {
         numThreads=n;
 		scv.reserve(n);
+        tile_draw_number.reserve(n);
 		for (int i = 0; i < n; i++)
 		{
 			massion_owner[i] = -1;
+            tile_draw_number.emplace_back(0.f);
             scv.emplace_back(&MultilThreadControl::worker, this, i);
 			//scv[i] = std::jthread(&MultilThreadControl::worker, this, i);
 		}
@@ -131,7 +135,7 @@ private:
             
            
             if (massion_owner[tid] != -1) {
-               
+                auto star2 = std::chrono::high_resolution_clock::now();
                 while (tiles[massion_owner[tid]].try_pop(mission)) {
                     tile_draw(*mission.renderer, mission.minX, mission.maxX, mission.minY, mission.maxY, mission.ydifferent,
                         mission.row_w0, mission.row_w1, mission.row_w2, mission.w0_step_vx_256,
@@ -142,8 +146,10 @@ private:
                         mission.dndx_block_vx, mission.dndx_block_vy, mission.dndx_block_vz,
                         mission.w0_stepy, mission.w1_stepy, mission.w2_stepy, mission.dzdy, mission.dcdy, mission.dndy,
                         mission.ka, mission.kd, mission.light);
+                    
 				}
-
+                auto end2 = std::chrono::high_resolution_clock::now();
+                tile_draw_number[tid] = std::chrono::duration<double, std::milli>(end2 - star2).count();
                 {
 					//tex.lock();
                     

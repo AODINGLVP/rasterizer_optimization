@@ -23,401 +23,405 @@
 // - mesh: Pointer to the Mesh object containing vertices and triangles to render.
 // - camera: Matrix representing the camera's transformation.
 // - L: Light object representing the lighting parameters.
-void render(Renderer& renderer, Mesh* mesh, matrix& camera, Light& L,MultilThreadControl *scv= nullptr,int tilenumber=8) {
-    // Combine perspective, camera, and world transformations for the mesh
-    matrix p = renderer.perspective * camera * mesh->world;
+void render(Renderer& renderer, Mesh* mesh, matrix& camera, Light& L, std::vector<int>& tile_splite, MultilThreadControl* scv = nullptr, int tilenumber = 8) {
+	// Combine perspective, camera, and world transformations for the mesh
+	matrix p = renderer.perspective * camera * mesh->world;
 
-    // Iterate through all triangles in the mesh
-    for (triIndices& ind : mesh->triangles) {
-        Vertex t[3]; // Temporary array to store transformed triangle vertices
-       
-        
-        //back-face culling
-        if (vec4::dot(mesh->world * mesh->vertices[ind.v[0]].normal, mesh->world * mesh->vertices[ind.v[0]].p - vec4(0.0f, 0.0f, -camera.a[11], 1.0f)) >= 0.0f) continue;
-        
-        
-        
-        // Transform each vertex of the triangle
-        for (unsigned int i = 0; i < 3; i++) {
-            t[i].p = p * mesh->vertices[ind.v[i]].p; // Apply transformations
-            t[i].p.divideW(); // Perspective division to normalize coordinates
+	// Iterate through all triangles in the mesh
+	for (triIndices& ind : mesh->triangles) {
+		Vertex t[3]; // Temporary array to store transformed triangle vertices
 
-            // Transform normals into world space for accurate lighting
-            // no need for perspective correction as no shearing or non-uniform scaling
-            t[i].normal = mesh->world * mesh->vertices[ind.v[i]].normal; 
-            t[i].normal.normalise();
 
-            // Map normalized device coordinates to screen space
-            t[i].p[0] = (t[i].p[0] + 1.f) * 0.5f * static_cast<float>(renderer.canvas.getWidth());
-            t[i].p[1] = (t[i].p[1] + 1.f) * 0.5f * static_cast<float>(renderer.canvas.getHeight());
-            t[i].p[1] = renderer.canvas.getHeight() - t[i].p[1]; // Invert y-axis
+		//back-face culling
+		if (vec4::dot(mesh->world * mesh->vertices[ind.v[0]].normal, mesh->world * mesh->vertices[ind.v[0]].p - vec4(0.0f, 0.0f, -camera.a[11], 1.0f)) >= 0.0f) continue;
 
-            // Copy vertex colours
-            t[i].rgb = mesh->vertices[ind.v[i]].rgb;
-        }
 
-        // Clip triangles with Z-values outside [-1, 1]
-        if (fabs(t[0].p[2]) > 1.0f || fabs(t[1].p[2]) > 1.0f || fabs(t[2].p[2]) > 1.0f) continue;
 
-        // Create a triangle object and render it
-        triangle tri(t[0], t[1], t[2]);
-        tri.draw(renderer, L, mesh->ka, mesh->kd, scv, tilenumber);
-    }
+		// Transform each vertex of the triangle
+		for (unsigned int i = 0; i < 3; i++) {
+			t[i].p = p * mesh->vertices[ind.v[i]].p; // Apply transformations
+			t[i].p.divideW(); // Perspective division to normalize coordinates
+
+			// Transform normals into world space for accurate lighting
+			// no need for perspective correction as no shearing or non-uniform scaling
+			t[i].normal = mesh->world * mesh->vertices[ind.v[i]].normal;
+			t[i].normal.normalise();
+
+			// Map normalized device coordinates to screen space
+			t[i].p[0] = (t[i].p[0] + 1.f) * 0.5f * static_cast<float>(renderer.canvas.getWidth());
+			t[i].p[1] = (t[i].p[1] + 1.f) * 0.5f * static_cast<float>(renderer.canvas.getHeight());
+			t[i].p[1] = renderer.canvas.getHeight() - t[i].p[1]; // Invert y-axis
+
+			// Copy vertex colours
+			t[i].rgb = mesh->vertices[ind.v[i]].rgb;
+		}
+
+		// Clip triangles with Z-values outside [-1, 1]
+		if (fabs(t[0].p[2]) > 1.0f || fabs(t[1].p[2]) > 1.0f || fabs(t[2].p[2]) > 1.0f) continue;
+
+		// Create a triangle object and render it
+		triangle tri(t[0], t[1], t[2]);
+		tri.draw(renderer, L, mesh->ka, mesh->kd, tile_splite, scv, tilenumber);
+	}
 }
 
 // Test scene function to demonstrate rendering with user-controlled transformations
 // No input variables
 /*
 void sceneTest() {
-    Renderer renderer;
-    // create light source {direction, diffuse intensity, ambient intensity}
-    Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
-    // camera is just a matrix
-    matrix camera = matrix::makeIdentity(); // Initialize the camera with identity matrix
+	Renderer renderer;
+	// create light source {direction, diffuse intensity, ambient intensity}
+	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
+	// camera is just a matrix
+	matrix camera = matrix::makeIdentity(); // Initialize the camera with identity matrix
 
-    bool running = true; // Main loop control variable
+	bool running = true; // Main loop control variable
 
-    std::vector<Mesh*> scene; // Vector to store scene objects
+	std::vector<Mesh*> scene; // Vector to store scene objects
 
-    // Create a sphere and a rectangle mesh
-    Mesh mesh = Mesh::makeSphere(1.0f, 10, 20);
-    //Mesh mesh2 = Mesh::makeRectangle(-2, -1, 2, 1);
+	// Create a sphere and a rectangle mesh
+	Mesh mesh = Mesh::makeSphere(1.0f, 10, 20);
+	//Mesh mesh2 = Mesh::makeRectangle(-2, -1, 2, 1);
 
-    // add meshes to scene
-    scene.push_back(&mesh);
-   // scene.push_back(&mesh2); 
+	// add meshes to scene
+	scene.push_back(&mesh);
+   // scene.push_back(&mesh2);
 
-    float x = 0.0f, y = 0.0f, z = -4.0f; // Initial translation parameters
-    mesh.world = matrix::makeTranslation(x, y, z);
-    //mesh2.world = matrix::makeTranslation(x, y, z) * matrix::makeRotateX(0.01f);
+	float x = 0.0f, y = 0.0f, z = -4.0f; // Initial translation parameters
+	mesh.world = matrix::makeTranslation(x, y, z);
+	//mesh2.world = matrix::makeTranslation(x, y, z) * matrix::makeRotateX(0.01f);
 
-    // Main rendering loop
-    while (running) {
-        renderer.canvas.checkInput(); // Handle user input
-        renderer.clear(); // Clear the canvas for the next frame
+	// Main rendering loop
+	while (running) {
+		renderer.canvas.checkInput(); // Handle user input
+		renderer.clear(); // Clear the canvas for the next frame
 
-        // Apply transformations to the meshes
-     //   mesh2.world = matrix::makeTranslation(x, y, z) * matrix::makeRotateX(0.01f);
-        mesh.world = matrix::makeTranslation(x, y, z);
+		// Apply transformations to the meshes
+	 //   mesh2.world = matrix::makeTranslation(x, y, z) * matrix::makeRotateX(0.01f);
+		mesh.world = matrix::makeTranslation(x, y, z);
 
-        // Handle user inputs for transformations
-        if (renderer.canvas.keyPressed(VK_ESCAPE)) break;
-        if (renderer.canvas.keyPressed('A')) x += -0.1f;
-        if (renderer.canvas.keyPressed('D')) x += 0.1f;
-        if (renderer.canvas.keyPressed('W')) y += 0.1f;
-        if (renderer.canvas.keyPressed('S')) y += -0.1f;
-        if (renderer.canvas.keyPressed('Q')) z += 0.1f;
-        if (renderer.canvas.keyPressed('E')) z += -0.1f;
+		// Handle user inputs for transformations
+		if (renderer.canvas.keyPressed(VK_ESCAPE)) break;
+		if (renderer.canvas.keyPressed('A')) x += -0.1f;
+		if (renderer.canvas.keyPressed('D')) x += 0.1f;
+		if (renderer.canvas.keyPressed('W')) y += 0.1f;
+		if (renderer.canvas.keyPressed('S')) y += -0.1f;
+		if (renderer.canvas.keyPressed('Q')) z += 0.1f;
+		if (renderer.canvas.keyPressed('E')) z += -0.1f;
 
-        // Render each object in the scene
-        for (auto& m : scene)
-            render(renderer, m, camera, L);
+		// Render each object in the scene
+		for (auto& m : scene)
+			render(renderer, m, camera, L);
 
-        renderer.present(); // Display the rendered frame
-    }
+		renderer.present(); // Display the rendered frame
+	}
 }
 
 // Utility function to generate a random rotation matrix
 // No input variables
 matrix makeRandomRotation() {
-    RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
-    unsigned int r = rng.getRandomInt(0, 3);
+	RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
+	unsigned int r = rng.getRandomInt(0, 3);
 
-    switch (r) {
-    case 0: return matrix::makeRotateX(rng.getRandomFloat(0.f, 2.0f * M_PI));
-    case 1: return matrix::makeRotateY(rng.getRandomFloat(0.f, 2.0f * M_PI));
-    case 2: return matrix::makeRotateZ(rng.getRandomFloat(0.f, 2.0f * M_PI));
-    default: return matrix::makeIdentity();
-    }
+	switch (r) {
+	case 0: return matrix::makeRotateX(rng.getRandomFloat(0.f, 2.0f * M_PI));
+	case 1: return matrix::makeRotateY(rng.getRandomFloat(0.f, 2.0f * M_PI));
+	case 2: return matrix::makeRotateZ(rng.getRandomFloat(0.f, 2.0f * M_PI));
+	default: return matrix::makeIdentity();
+	}
 }
 
 // Function to render a scene with multiple objects and dynamic transformations
 // No input variables
 void scene1() {
-    Renderer renderer;
-    matrix camera;
-    Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
+	Renderer renderer;
+	matrix camera;
+	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
 
-    bool running = true;
+	bool running = true;
 
-    std::vector<Mesh*> scene;
+	std::vector<Mesh*> scene;
 
-    // Create a scene of 40 cubes with random rotations
-    for (unsigned int i = 0; i < 20; i++) {
-        Mesh* m = new Mesh();
-        *m = Mesh::makeCube(1.f);
-        m->world = matrix::makeTranslation(-2.0f, 0.0f, (-3 * static_cast<float>(i))) * makeRandomRotation();
-        scene.push_back(m);
-        m = new Mesh();
-        *m = Mesh::makeCube(1.f);
-        m->world = matrix::makeTranslation(2.0f, 0.0f, (-3 * static_cast<float>(i))) * makeRandomRotation();
-        scene.push_back(m);
-    }
+	// Create a scene of 40 cubes with random rotations
+	for (unsigned int i = 0; i < 20; i++) {
+		Mesh* m = new Mesh();
+		*m = Mesh::makeCube(1.f);
+		m->world = matrix::makeTranslation(-2.0f, 0.0f, (-3 * static_cast<float>(i))) * makeRandomRotation();
+		scene.push_back(m);
+		m = new Mesh();
+		*m = Mesh::makeCube(1.f);
+		m->world = matrix::makeTranslation(2.0f, 0.0f, (-3 * static_cast<float>(i))) * makeRandomRotation();
+		scene.push_back(m);
+	}
 
-    float zoffset = 8.0f; // Initial camera Z-offset
-    float step = -0.1f;  // Step size for camera movement
+	float zoffset = 8.0f; // Initial camera Z-offset
+	float step = -0.1f;  // Step size for camera movement
 
-    auto start = std::chrono::high_resolution_clock::now();
-    std::chrono::time_point<std::chrono::high_resolution_clock> end;
-    int cycle = 0;
+	auto start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> end;
+	int cycle = 0;
 
-    // Main rendering loop
-    while (running) {
-        renderer.canvas.checkInput();
-        renderer.clear();
+	// Main rendering loop
+	while (running) {
+		renderer.canvas.checkInput();
+		renderer.clear();
 
-        camera = matrix::makeTranslation(0, 0, -zoffset); // Update camera position
+		camera = matrix::makeTranslation(0, 0, -zoffset); // Update camera position
 
-        // Rotate the first two cubes in the scene
-        scene[0]->world = scene[0]->world * matrix::makeRotateXYZ(0.1f, 0.1f, 0.0f);
-        scene[1]->world = scene[1]->world * matrix::makeRotateXYZ(0.0f, 0.1f, 0.2f);
+		// Rotate the first two cubes in the scene
+		scene[0]->world = scene[0]->world * matrix::makeRotateXYZ(0.1f, 0.1f, 0.0f);
+		scene[1]->world = scene[1]->world * matrix::makeRotateXYZ(0.0f, 0.1f, 0.2f);
 
-        if (renderer.canvas.keyPressed(VK_ESCAPE)) break;
+		if (renderer.canvas.keyPressed(VK_ESCAPE)) break;
 
-        zoffset += step;
-        if (zoffset < -60.f || zoffset > 8.f) {
-            step *= -1.f;
-            if (++cycle % 2 == 0) {
-                end = std::chrono::high_resolution_clock::now();
-                std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
-                start = std::chrono::high_resolution_clock::now();
-            }
-        }
+		zoffset += step;
+		if (zoffset < -60.f || zoffset > 8.f) {
+			step *= -1.f;
+			if (++cycle % 2 == 0) {
+				end = std::chrono::high_resolution_clock::now();
+				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
+				start = std::chrono::high_resolution_clock::now();
+			}
+		}
 
-        for (auto& m : scene)
-            render(renderer, m, camera, L);
-        renderer.present();
-    }
+		for (auto& m : scene)
+			render(renderer, m, camera, L);
+		renderer.present();
+	}
 
-    for (auto& m : scene)
-        delete m;
+	for (auto& m : scene)
+		delete m;
 }
 
 // Scene with a grid of cubes and a moving sphere
 // No input variables
 void scene2() {
-    Renderer *renderer=new Renderer();
-    matrix camera = matrix::makeIdentity();
-    Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
+	Renderer *renderer=new Renderer();
+	matrix camera = matrix::makeIdentity();
+	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
 
-    std::vector<Mesh*> scene;
+	std::vector<Mesh*> scene;
 
-    struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
-    std::vector<rRot> rotations;
+	struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
+	std::vector<rRot> rotations;
 
-    RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
+	RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
 
-    // Create a grid of cubes with random rotations
-    for (unsigned int y = 0; y < 6; y++) {
-        for (unsigned int x = 0; x < 8; x++) {
-            Mesh* m = new Mesh();
-            *m = Mesh::makeCube(1.f);
-            scene.push_back(m);
-            m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 5.0f - (static_cast<float>(y) * 2.f), -8.f);
-            rRot r{ rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f) };
-            rotations.push_back(r);
-        }
-    }
+	// Create a grid of cubes with random rotations
+	for (unsigned int y = 0; y < 6; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 5.0f - (static_cast<float>(y) * 2.f), -8.f);
+			rRot r{ rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f) };
+			rotations.push_back(r);
+		}
+	}
 
-    // Create a sphere and add it to the scene
-    Mesh* sphere = new Mesh();
-    *sphere = Mesh::makeSphere(1.0f, 10, 20);
-    scene.push_back(sphere);
-    float sphereOffset = -6.f;
-    float sphereStep = 0.1f;
-    sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
+	// Create a sphere and add it to the scene
+	Mesh* sphere = new Mesh();
+	*sphere = Mesh::makeSphere(1.0f, 10, 20);
+	scene.push_back(sphere);
+	float sphereOffset = -6.f;
+	float sphereStep = 0.1f;
+	sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    std::chrono::time_point<std::chrono::high_resolution_clock> end;
-    int cycle = 0;
+	auto start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> end;
+	int cycle = 0;
 
-    bool running = true;
-    
-    //bool show = 0;
-    while (running) {
-        renderer->canvas.checkInput();
-        renderer->clear();
+	bool running = true;
 
-        // Rotate each cube in the grid
-        for (unsigned int i = 0; i < rotations.size(); i++)
-            scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
+	//bool show = 0;
+	while (running) {
+		renderer->canvas.checkInput();
+		renderer->clear();
 
-        // Move the sphere back and forth
-        sphereOffset += sphereStep;
-        sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
-        if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
-            sphereStep *= -1.f;
-            if (++cycle % 2 == 0) {
-                end = std::chrono::high_resolution_clock::now();
-                std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
-                start = std::chrono::high_resolution_clock::now();
-            }
-        }
+		// Rotate each cube in the grid
+		for (unsigned int i = 0; i < rotations.size(); i++)
+			scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
 
-        if (renderer->canvas.keyPressed(VK_ESCAPE)) break;
+		// Move the sphere back and forth
+		sphereOffset += sphereStep;
+		sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
+		if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
+			sphereStep *= -1.f;
+			if (++cycle % 2 == 0) {
+				end = std::chrono::high_resolution_clock::now();
+				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
+				start = std::chrono::high_resolution_clock::now();
+			}
+		}
 
-        for (auto& m : scene)
-            render(*renderer, m, camera, L);
-        renderer->present();
-    }
+		if (renderer->canvas.keyPressed(VK_ESCAPE)) break;
 
-    for (auto& m : scene)
-        delete m;
+		for (auto& m : scene)
+			render(*renderer, m, camera, L);
+		renderer->present();
+	}
+
+	for (auto& m : scene)
+		delete m;
 }
 void scene3() {
-    Renderer renderer;
-    matrix camera = matrix::makeIdentity();
-    Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
+	Renderer renderer;
+	matrix camera = matrix::makeIdentity();
+	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
 
-    std::vector<Mesh*> scene;
+	std::vector<Mesh*> scene;
 
-    struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
-    std::vector<rRot> rotations;
+	struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
+	std::vector<rRot> rotations;
 
-    RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
+	RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
 
-    // Create a grid of cubes with random rotations
-    for (unsigned int y = 0; y < 6; y++) {
-        for (unsigned int x = 0; x < 8; x++) {
-            Mesh* m = new Mesh();
-            *m = Mesh::makeCube(1.f);
-            scene.push_back(m);
-            m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 5.0f - (static_cast<float>(y) * 2.f), -8.f);
-            rRot r{ rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f) };
+	// Create a grid of cubes with random rotations
+	for (unsigned int y = 0; y < 6; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 5.0f - (static_cast<float>(y) * 2.f), -8.f);
+			rRot r{ rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f) };
 			r = { -0.5f,0.5f,0.5f };
-            rotations.push_back(r);
-        }
-    }
+			rotations.push_back(r);
+		}
+	}
 
-    // Create a sphere and add it to the scene
-    Mesh* sphere = new Mesh();
-    *sphere = Mesh::makeSphere(1.0f, 10, 20);
-    scene.push_back(sphere);
-    float sphereOffset = -6.f;
-    float sphereStep = 0.1f;
-    sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
+	// Create a sphere and add it to the scene
+	Mesh* sphere = new Mesh();
+	*sphere = Mesh::makeSphere(1.0f, 10, 20);
+	scene.push_back(sphere);
+	float sphereOffset = -6.f;
+	float sphereStep = 0.1f;
+	sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    std::chrono::time_point<std::chrono::high_resolution_clock> end;
-    int cycle = 0;
+	auto start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> end;
+	int cycle = 0;
 
-    bool running = true;
-    //bool show = 0;
-    while (running) {
-        renderer.canvas.checkInput();
-        renderer.clear();
+	bool running = true;
+	//bool show = 0;
+	while (running) {
+		renderer.canvas.checkInput();
+		renderer.clear();
 
-        // Rotate each cube in the grid
-        for (unsigned int i = 0; i < rotations.size(); i++)
-            scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
+		// Rotate each cube in the grid
+		for (unsigned int i = 0; i < rotations.size(); i++)
+			scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
 
-        // Move the sphere back and forth
-        sphereOffset += sphereStep;
-        sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
-        if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
-            sphereStep *= -1.f;
-            if (++cycle % 2 == 0) {
-                end = std::chrono::high_resolution_clock::now();
-                std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
-                start = std::chrono::high_resolution_clock::now();
-            }
-        }
+		// Move the sphere back and forth
+		sphereOffset += sphereStep;
+		sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
+		if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
+			sphereStep *= -1.f;
+			if (++cycle % 2 == 0) {
+				end = std::chrono::high_resolution_clock::now();
+				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
+				start = std::chrono::high_resolution_clock::now();
+			}
+		}
 
-        if (renderer.canvas.keyPressed(VK_ESCAPE)) break;
+		if (renderer.canvas.keyPressed(VK_ESCAPE)) break;
 
-        for (auto& m : scene)
-            render(renderer, m, camera, L);
-        renderer.present();
-    }
+		for (auto& m : scene)
+			render(renderer, m, camera, L);
+		renderer.present();
+	}
 
-    for (auto& m : scene)
-        delete m;
+	for (auto& m : scene)
+		delete m;
 }
 
 */
 
 
 void multil_scene3() {
-   Renderer::instance();
-    matrix camera = matrix::makeIdentity();
-    Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
+	vector<int>tile_splite;
+	Renderer::instance();
+	matrix camera = matrix::makeIdentity();
+	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
 
-    std::vector<Mesh*> scene;
+	std::vector<Mesh*> scene;
 
-    struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
-    std::vector<rRot> rotations;
+	struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
+	std::vector<rRot> rotations;
 
-    RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
+	RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
 
-    // Create a grid of cubes with random rotations
-    for (unsigned int y = 0; y < 6; y++) {
-        for (unsigned int x = 0; x < 8; x++) {
-            Mesh* m = new Mesh();
-            *m = Mesh::makeCube(1.f);
-            scene.push_back(m);
-            m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 5.0f - (static_cast<float>(y) * 2.f), -8.f);
-            rRot r{ rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f) };
-            r = { -0.5f,0.5f,0.5f };
-            rotations.push_back(r);
-        }
-    }
+	// Create a grid of cubes with random rotations
+	for (unsigned int y = 0; y < 6; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 5.0f - (static_cast<float>(y) * 2.f), -8.f);
+			rRot r{ rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f) };
+			r = { -0.5f,0.5f,0.5f };
+			rotations.push_back(r);
+		}
+	}
 
-    // Create a sphere and add it to the scene
-    Mesh* sphere = new Mesh();
-    *sphere = Mesh::makeSphere(1.0f, 10, 20);
-    scene.push_back(sphere);
-    float sphereOffset = -6.f;
-    float sphereStep = 0.1f;
-    sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
+	// Create a sphere and add it to the scene
+	Mesh* sphere = new Mesh();
+	*sphere = Mesh::makeSphere(1.0f, 10, 20);
+	scene.push_back(sphere);
+	float sphereOffset = -6.f;
+	float sphereStep = 0.1f;
+	sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    std::chrono::time_point<std::chrono::high_resolution_clock> end;
-    int cycle = 0;
+	auto start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> end;
+	int cycle = 0;
 
-    bool running = true;
-	MultilThreadControl *scv = new MultilThreadControl();
-   
-	
-    int all_number = 10;
-    std::jthread for_produce;
+	bool running = true;
+	MultilThreadControl* scv = new MultilThreadControl();
+
+
+	int all_number = 6;
+	std::jthread for_produce;
 	double fenfa_count_time = 0.0;
 	double chule_count_time = 0.0;
 	double qianqian_time = 0.0;
-    //bool show = 0;
-    scv->start(all_number);
+	//bool show = 0;
+	scv->start(all_number);
+
+	for (int i = 0; i < all_number; i++) {
+		tile_splite.emplace_back(768 / all_number * i);
+	}
+	tile_splite.emplace_back(768);
+	std::vector<int>tile_different(all_number);
+	while (running) {
 
 
 
-    while (running) {
-
-
-       
 		scv->produce_done = false;
 		scv->active_workers = all_number;
-        auto star3 = std::chrono::high_resolution_clock::now();
-        Renderer::instance().canvas.checkInput();
-        Renderer::instance().clear();
+		auto star3 = std::chrono::high_resolution_clock::now();
+		Renderer::instance().canvas.checkInput();
+		Renderer::instance().clear();
 
-        // Rotate each cube in the grid
-        for (unsigned int i = 0; i < rotations.size(); i++)
-            scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
+		// Rotate each cube in the grid
+		for (unsigned int i = 0; i < rotations.size(); i++)
+			scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
 
-        // Move the sphere back and forth
-        sphereOffset += sphereStep;
-        sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
-
-
+		// Move the sphere back and forth
+		sphereOffset += sphereStep;
+		sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
 
 
 
 
 
-        if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
-            sphereStep *= -1.f;
-            if (++cycle % 2 == 0) {
-                end = std::chrono::high_resolution_clock::now();
-                std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
-                start = std::chrono::high_resolution_clock::now();
+
+
+		if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
+			sphereStep *= -1.f;
+			if (++cycle % 2 == 0) {
+				end = std::chrono::high_resolution_clock::now();
+				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
+				start = std::chrono::high_resolution_clock::now();
 
 				std::cout << "fenfa_count_time :" << fenfa_count_time << "ms\n";
 				fenfa_count_time = 0.0;
@@ -425,21 +429,29 @@ void multil_scene3() {
 				chule_count_time = 0.0;
 				std::cout << "qianqian_time :" << qianqian_time << "ms\n";
 				qianqian_time = 0.0;
-            }
-        }
+				for (int i = 0; i <= all_number; i++) {
+					std::cout << tile_splite[i] << "      " << i << "\n";
+					
+				}
+				for (int i = 0; i < all_number; i++) {
+					
+					std::cout << scv->tile_draw_number[i] << "      " << i << "\n";
+				}
+			}
+		}
 
-        if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
+		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
 		scv->setTileCount(all_number);
-      
-        for (int i = 0; i < all_number; i++) {
+
+		for (int i = 0; i < all_number; i++) {
 			//scv->tiles.push_back(SPSCQueue());
 			scv->tiles[i].taskQueue = std::queue<TileWork>();
-          
+
 			scv->numThreads = all_number;
-        }
-      
-       
-        auto end3 = std::chrono::high_resolution_clock::now();
+		}
+
+
+		auto end3 = std::chrono::high_resolution_clock::now();
 		qianqian_time += std::chrono::duration<double, std::milli>(end3 - star3).count();
 
 
@@ -452,20 +464,18 @@ void multil_scene3() {
 
 
 
-        auto star1 = std::chrono::high_resolution_clock::now();
-        for (auto& m : scene) {
-            render(Renderer::instance(), m, camera, L, scv, all_number);
-            
-        }
-        auto end1 = std::chrono::high_resolution_clock::now();
+		auto star1 = std::chrono::high_resolution_clock::now();
+		for (auto& m : scene) {
+			render(Renderer::instance(), m, camera, L, tile_splite, scv, all_number);
+
+		}
+		auto end1 = std::chrono::high_resolution_clock::now();
 		fenfa_count_time += std::chrono::duration<double, std::milli>(end1 - star1).count();
-		
+
 		//scv->stop = false;
-        //scv->produce_done = true;
+		//scv->produce_done = true;
 
-        //scv->start();
-
-
+		//scv->start();
 
 
 
@@ -476,40 +486,86 @@ void multil_scene3() {
 
 
 
-        auto star2 = std::chrono::high_resolution_clock::now();
-        int tilessizenumber = 0;
-        for (int i = 0; i < all_number; i++) {
 
-            tilessizenumber += scv->tiles[i].taskQueue.size();
-        }
-       
-        for (int i = 0; i < 10; i++) {
+
+		auto star2 = std::chrono::high_resolution_clock::now();
+		int tilessizenumber = 0;
+		for (int i = 0; i < all_number; i++) {
+
+			tile_different[i] = scv->tiles[i].taskQueue.size();
+			//tilessizenumber += scv->tiles[i].taskQueue.size();
+		}
+
+		for (int i = 0; i < 10; i++) {
 			scv->massion_owner[i] = i;
-        }
+		}
+		for (int i = 0; i < all_number; i++) {
+			scv->tile_draw_number[i] = 0;
+		}
 		scv->produce_done = true;
-        scv->stop_flag = scv->stop_flag + 1;
-        scv->stop_flag.notify_all();
-        //cout << "tile size number:" << tilessizenumber << endl;
+		scv->stop_flag = scv->stop_flag + 1;
+		scv->stop_flag.notify_all();
+		//cout << "tile size number:" << tilessizenumber << endl;
 
 
 
-        while (1) {
-            if ( scv->active_workers == 0) {
-                break;
-            }
-			
-        }
-        
-     
-        //scv->stop_workers();
-        Renderer::instance().present();
-        auto end2 = std::chrono::high_resolution_clock::now();
-        chule_count_time += std::chrono::duration<double, std::milli>(end2 - star2).count();
-	
-    }
+		while (1) {
+			if (scv->active_workers == 0) {
+				break;
+			}
 
-    for (auto& m : scene)
-        delete m;
+		}
+
+
+		//scv->stop_workers();
+		Renderer::instance().present();
+		int maxsize = 0;
+		int rightnumber = 0;
+		for (int i = 0; i < all_number; i++) {
+			if (scv->tile_draw_number[i] > maxsize) {
+				maxsize = scv->tile_draw_number[i];
+				rightnumber = i;
+			}
+		}
+		if (rightnumber == 0) {
+			if (tile_splite[1] - 40 > 0) {
+				tile_splite[1] -=40;
+
+			}
+		}
+		else if (rightnumber == 1) {
+			if (tile_splite[1] - 20 > 0) {
+				tile_splite[1] -= 20;
+			}
+			if (tile_splite[2] + 20 < tile_splite[3]) {
+				tile_splite[2] += 20;
+			}
+		}
+		else if (rightnumber == all_number - 1) {
+			if (tile_splite[all_number - 1] + 40 < 768) {
+				tile_splite[1] += 40;
+
+			}
+		}
+		else {
+			if (tile_splite[rightnumber] + 20 < tile_splite[rightnumber + 1]) {
+				tile_splite[rightnumber] += 20;
+
+			}
+			if (tile_splite[rightnumber + 1] - 20 > tile_splite[rightnumber]) {
+				tile_splite[rightnumber + 1] -= 20;
+
+			}
+		}
+		//tile_splite[1] = 200;
+		auto end2 = std::chrono::high_resolution_clock::now();
+		chule_count_time += std::chrono::duration<double, std::milli>(end2 - star2).count();
+
+	}
+
+
+	for (auto& m : scene)
+		delete m;
 }
 
 
@@ -517,13 +573,13 @@ void multil_scene3() {
 // Entry point of the application
 // No input variables
 int main() {
-    // Uncomment the desired scene function to run
-    //scene1();
-    //scene2();
-     //scene3();
+	// Uncomment the desired scene function to run
+	//scene1();
+	//scene2();
+	 //scene3();
 	multil_scene3();
-    //sceneTest(); 
-    
+	//sceneTest(); 
 
-    return 0;
+
+	return 0;
 }

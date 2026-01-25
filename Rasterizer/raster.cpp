@@ -351,7 +351,7 @@ void multil_scene3() {
 	RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
 
 	// Create a grid of cubes with random rotations
-	for (unsigned int y = 0; y < 6; y++) {
+	for (unsigned int y = 0; y < 3; y++) {
 		for (unsigned int x = 0; x < 8; x++) {
 			Mesh* m = new Mesh();
 			*m = Mesh::makeCube(1.f);
@@ -379,7 +379,7 @@ void multil_scene3() {
 	MultilThreadControl* scv = new MultilThreadControl();
 
 
-	int all_number = 6;
+	int all_number =6;
 	std::jthread for_produce;
 	double fenfa_count_time = 0.0;
 	double chule_count_time = 0.0;
@@ -490,11 +490,7 @@ void multil_scene3() {
 
 		auto star2 = std::chrono::high_resolution_clock::now();
 		int tilessizenumber = 0;
-		for (int i = 0; i < all_number; i++) {
-
-			tile_different[i] = scv->tiles[i].taskQueue.size();
-			//tilessizenumber += scv->tiles[i].taskQueue.size();
-		}
+		
 
 		for (int i = 0; i < 10; i++) {
 			scv->massion_owner[i] = i;
@@ -521,6 +517,35 @@ void multil_scene3() {
 		Renderer::instance().present();
 		int maxsize = 0;
 		int rightnumber = 0;
+		double total_time=0;
+		
+
+		if (scv->tile_draw_number[0] < scv->tile_draw_number[1]) {
+			if (tile_splite[1] + 20 < tile_splite[2]) {
+				tile_splite[1] += 20;
+			}
+		}
+		for (int i = 1; i < all_number-1; i++) {
+			if (scv->tile_draw_number[i] < scv->tile_draw_number[i + 1]) {
+				if (tile_splite[i + 1] + 20 < tile_splite[i + 2]) {
+					tile_splite[i + 1] += 20;
+				}
+			}
+			if (scv->tile_draw_number[i] < scv->tile_draw_number[i - 1]) {
+				if (tile_splite[i] - 20 > tile_splite[i - 1]) {
+					tile_splite[i] -= 20;
+				}
+			}
+		}
+		if (scv->tile_draw_number[all_number-1] < scv->tile_draw_number[all_number-2]) {
+			if (tile_splite[all_number-1] - 20 > tile_splite[all_number-2]) {
+				tile_splite[all_number-1] -= 20;
+			}
+		}
+
+
+		/*
+
 		for (int i = 0; i < all_number; i++) {
 			if (scv->tile_draw_number[i] > maxsize) {
 				maxsize = scv->tile_draw_number[i];
@@ -556,7 +581,7 @@ void multil_scene3() {
 				tile_splite[rightnumber + 1] -= 20;
 
 			}
-		}
+		}*/
 		//tile_splite[1] = 200;
 		auto end2 = std::chrono::high_resolution_clock::now();
 		chule_count_time += std::chrono::duration<double, std::milli>(end2 - star2).count();

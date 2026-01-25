@@ -351,7 +351,7 @@ void multil_scene3() {
 	RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
 
 	// Create a grid of cubes with random rotations
-	for (unsigned int y = 0; y < 3; y++) {
+	for (unsigned int y = 0; y < 6; y++) {
 		for (unsigned int x = 0; x < 8; x++) {
 			Mesh* m = new Mesh();
 			*m = Mesh::makeCube(1.f);

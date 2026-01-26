@@ -550,6 +550,16 @@ namespace GamesEngineeringBase
 		{
 			memset(image, 0, width * height * 3 * sizeof(unsigned char));
 		}
+		void tile_clear(unsigned int miny, unsigned int maxy) {
+
+
+			unsigned char* start = image + 1024 * miny * sizeof(unsigned char) * 3;
+
+			memset(start, 0, 3 * (1024 * (maxy-miny)+1024) * sizeof(unsigned char));
+
+
+			
+		}
 
 		// Presents the back buffer to the screen
 		void present()

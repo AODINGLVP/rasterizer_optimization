@@ -43,9 +43,7 @@ public:
 	// - y: Y-coordinate of the pixel.
 	// Returns a reference to the depth value at (x, y).
 	T& operator () (unsigned int x, unsigned int y) {
-		assert(buffer != nullptr);
-		assert(x < width);
-		assert(y < height);
+		
 		return buffer[(y * width) + x]; // Convert 2D coordinates to 1D index
 	}
 
@@ -71,11 +69,7 @@ public:
 			_mm256_store_ps(&buffer[i], onef);
 			//buffer[i] = T(1.0); // Reset each depth value
 		}
-		i -= 8;
-		for (; i <= scvmax; i++) {
-			buffer[i] = 1.0f;
-
-		}
+		
 
 	}
 

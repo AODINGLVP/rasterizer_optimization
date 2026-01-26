@@ -413,6 +413,28 @@ void multil_scene1() {
 	}
 	tile_splite.emplace_back(768);
 	std::vector<int>tile_different(all_number);
+	TileWork clear_work;
+	for (int i = 0; i < all_number; i++) {
+		int tile_minY;
+		int tile_maxY;
+
+		if (i == 0) {
+			tile_minY = 0;
+			tile_maxY = tile_splite[i + 1] - 8;
+		}
+		else   if (i == all_number - 1) {
+			tile_minY = tile_splite[i] - 7;
+			tile_maxY = 767;
+		}
+		else {
+			tile_minY = tile_splite[i] - 7;
+			tile_maxY = tile_splite[i + 1] - 8;
+		}
+		clear_work.minY = tile_minY;
+		clear_work.maxY = tile_maxY;
+		scv->tiles[i].try_push(clear_work);
+
+	}
 	while (running) {
 
 
@@ -421,7 +443,7 @@ void multil_scene1() {
 		scv->active_workers = all_number;
 		auto star3 = std::chrono::high_resolution_clock::now();
 		Renderer::instance().canvas.checkInput();
-		Renderer::instance().clear();
+		//Renderer::instance().clear();
 
 		camera = matrix::makeTranslation(0, 0, -zoffset); // Update camera position
 
@@ -461,7 +483,7 @@ void multil_scene1() {
 
 		for (int i = 0; i < all_number; i++) {
 			//scv->tiles.push_back(SPSCQueue());
-			scv->tiles[i].taskQueue = std::queue<TileWork>();
+			//scv->tiles[i].taskQueue = std::queue<TileWork>();
 
 			scv->numThreads = all_number;
 		}
@@ -492,7 +514,7 @@ void multil_scene1() {
 		scv->produce_done = true;
 		scv->stop_flag = scv->stop_flag + 1;
 		scv->stop_flag.notify_all();
-
+		
 		while (1) {
 			if (scv->active_workers == 0) {
 				break;
@@ -528,7 +550,28 @@ void multil_scene1() {
 				tile_splite[all_number - 1] -= 20;
 			}
 		}
+		
+		for (int i = 0; i < all_number; i++) {
+			int tile_minY;
+			int tile_maxY;
 
+			if (i == 0) {
+				tile_minY = 0;
+				tile_maxY = tile_splite[i + 1] - 8;
+			}
+			else   if (i == all_number - 1) {
+				tile_minY = tile_splite[i] - 7;
+				tile_maxY = 767;
+			}
+			else {
+				tile_minY = tile_splite[i] - 7;
+				tile_maxY = tile_splite[i + 1] - 8;
+			}
+			clear_work.minY = tile_minY;
+			clear_work.maxY = tile_maxY;
+			scv->tiles[i].try_push(clear_work);
+
+		}
 		auto end2 = std::chrono::high_resolution_clock::now();
 		chule_count_time += std::chrono::duration<double, std::milli>(end2 - star2).count();
 
@@ -593,6 +636,28 @@ void multil_scene2() {
 	}
 	tile_splite.emplace_back(768);
 	std::vector<int>tile_different(all_number);
+	TileWork clear_work;
+	for (int i = 0; i < all_number; i++) {
+		int tile_minY;
+		int tile_maxY;
+
+		if (i == 0) {
+			tile_minY = 0;
+			tile_maxY = tile_splite[i + 1] - 8;
+		}
+		else   if (i == all_number - 1) {
+			tile_minY = tile_splite[i] - 7;
+			tile_maxY = 767;
+		}
+		else {
+			tile_minY = tile_splite[i] - 7;
+			tile_maxY = tile_splite[i + 1] - 8;
+		}
+		clear_work.minY = tile_minY;
+		clear_work.maxY = tile_maxY;
+		scv->tiles[i].try_push(clear_work);
+
+	}
 	while (running) {
 
 
@@ -601,7 +666,7 @@ void multil_scene2() {
 		scv->active_workers = all_number;
 		
 		Renderer::instance().canvas.checkInput();
-		Renderer::instance().canvas.clear();
+		//Renderer::instance().canvas.clear();
 		auto star3 = std::chrono::high_resolution_clock::now();
 		//Renderer::instance().clear();
 		

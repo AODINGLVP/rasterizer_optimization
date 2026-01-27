@@ -513,6 +513,15 @@ namespace GamesEngineeringBase
 			image[index + 1] = g;
 			image[index + 2] = b;
 		}
+
+		void draw_line(int y) {
+			for (int i = y * 1024; i < 1024 * y + 1024; i++) {
+				int index = i * 3;
+				image[index] = 255;
+				image[index + 1] = 0;
+				image[index + 2] = 0;
+			}
+		}
 		
 		// Draws maby aos
 		void draw(int x, int y, float r[8], float g[8], float b[8])

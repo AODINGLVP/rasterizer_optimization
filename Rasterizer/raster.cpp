@@ -5,7 +5,7 @@
 #include "GamesEngineeringBase.h" // Include the GamesEngineeringBase header
 #include <algorithm>
 #include <chrono>
-
+#include <fstream>
 
 #include "matrix.h"
 #include "colour.h"
@@ -118,6 +118,8 @@ void render_multiple(Renderer& renderer, Mesh* mesh, matrix& camera, Light& L, s
 }
 
 void scene1() {
+	std::ofstream perf_csv("../test_result/frame_time_scene1_single.csv");
+	perf_csv << "frame;ms\n";
 	Renderer::instance();
 	matrix camera;
 	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
@@ -156,14 +158,21 @@ void scene1() {
 		scene[0]->world = scene[0]->world * matrix::makeRotateXYZ(0.1f, 0.1f, 0.0f);
 		scene[1]->world = scene[1]->world * matrix::makeRotateXYZ(0.0f, 0.1f, 0.2f);
 
-		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
+		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) {
+			perf_csv.close();
+			break;
+		}
 
 		zoffset += step;
 		if (zoffset < -60.f || zoffset > 8.f) {
 			step *= -1.f;
 			if (++cycle % 2 == 0) {
 				end = std::chrono::high_resolution_clock::now();
+
 				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
+				perf_csv << cycle / 2 << ";"
+					<< std::chrono::duration<double, std::milli>(end - start).count()
+					<< "\n";
 				start = std::chrono::high_resolution_clock::now();
 			}
 		}
@@ -177,6 +186,8 @@ void scene1() {
 		delete m;
 }
 void scene2() {
+	std::ofstream perf_csv("../test_result/frame_time_scene2_single.csv");
+	perf_csv << "frame;ms\n";
 	Renderer::instance();
 	matrix camera = matrix::makeIdentity();
 	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
@@ -229,12 +240,18 @@ void scene2() {
 			sphereStep *= -1.f;
 			if (++cycle % 2 == 0) {
 				end = std::chrono::high_resolution_clock::now();
+				perf_csv << cycle / 2 << ";"
+					<< std::chrono::duration<double, std::milli>(end - start).count()
+					<< "\n";
 				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
 				start = std::chrono::high_resolution_clock::now();
 			}
 		}
 
-		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
+		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) {
+			perf_csv.close();
+			break;
+		}
 
 		for (auto& m : scene)
 			render(Renderer::instance(), m, camera, L);
@@ -245,8 +262,12 @@ void scene2() {
 		delete m;
 }
 void scene3() {
+	std::ofstream perf_csv("../test_result/frame_time_scene3_single.csv");
+	perf_csv << "frame;ms\n";
 	Renderer::instance();
-	matrix camera = matrix::makeIdentity();
+	matrix camera;
+	float zoffset = 8.0f; // Initial camera Z-offset
+	float step = -0.05f;  // Step size for camera movement
 	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
 
 	std::vector<Mesh*> scene;
@@ -254,28 +275,55 @@ void scene3() {
 	struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
 	std::vector<rRot> rotations;
 
-	RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
+	//RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
 
 	// Create a grid of cubes with random rotations
-	for (unsigned int y = 0; y < 6; y++) {
+
+
+	for (unsigned int y = 0; y < 3; y++) {
 		for (unsigned int x = 0; x < 8; x++) {
 			Mesh* m = new Mesh();
 			*m = Mesh::makeCube(1.f);
 			scene.push_back(m);
-			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 5.0f - (static_cast<float>(y) * 2.f), -8.f);
-			rRot r{ rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f), rng.getRandomFloat(-.1f, .1f) };
-			r = { -0.5f,0.5f,0.5f };
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 6.0f - (static_cast<float>(y) * 2.f), -4.f);
+			rRot r = { -0.5f,0.5f,0.5f };
+			rotations.push_back(r);
+		}
+	}
+
+	for (unsigned int y = 0; y < 3; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), -5.f - (static_cast<float>(y) * 2.f), -4.f);
+			rRot r = { -0.5f,0.5f,0.5f };
+			rotations.push_back(r);
+		}
+	}
+	for (unsigned int y = 0; y < 3; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 6.0f - (static_cast<float>(y) * 2.f), -12.f);
+			rRot r = { -0.5f,0.5f,0.5f };
+			rotations.push_back(r);
+		}
+	}
+
+	for (unsigned int y = 0; y < 3; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), -5.f - (static_cast<float>(y) * 2.f), -12.f);
+			rRot r = { -0.5f,0.5f,0.5f };
 			rotations.push_back(r);
 		}
 	}
 
 	// Create a sphere and add it to the scene
-	Mesh* sphere = new Mesh();
-	*sphere = Mesh::makeSphere(1.0f, 10, 20);
-	scene.push_back(sphere);
-	float sphereOffset = -6.f;
-	float sphereStep = 0.1f;
-	sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
 
 	auto start = std::chrono::high_resolution_clock::now();
 	std::chrono::time_point<std::chrono::high_resolution_clock> end;
@@ -286,25 +334,30 @@ void scene3() {
 	while (running) {
 		Renderer::instance().canvas.checkInput();
 		Renderer::instance().clear();
-
+		camera = matrix::makeTranslation(0, 0, -zoffset); // Update camera position
 		// Rotate each cube in the grid
 		for (unsigned int i = 0; i < rotations.size(); i++)
 			scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
 
 		// Move the sphere back and forth
-		sphereOffset += sphereStep;
-		sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
-		if (sphereOffset > 6.0f || sphereOffset < -6.0f) {
-			sphereStep *= -1.f;
+
+		if (zoffset < -12.f || zoffset > 8.f) {
+			step *= -1.f;
 			if (++cycle % 2 == 0) {
 				end = std::chrono::high_resolution_clock::now();
+				perf_csv << cycle / 2 << ";"
+					<< std::chrono::duration<double, std::milli>(end - start).count()
+					<< "\n";
 				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
 				start = std::chrono::high_resolution_clock::now();
 			}
 		}
 
-		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
-
+		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) {
+			perf_csv.close();
+			break;
+		}
+		zoffset += step;
 		for (auto& m : scene)
 			render(Renderer::instance(), m, camera, L);
 		Renderer::instance().present();
@@ -362,6 +415,11 @@ void sceneTest() {
 	}
 }
 void multil_scene1() {
+	int all_number = 6;
+	std::string document;
+	document = "../test_result/frame_time_scene1_processer_amount" + std::to_string(all_number) + "_multiple.csv";
+	std::ofstream perf_csv(document);
+	perf_csv << "frame;ms\n";
 	vector<int>tile_splite;
 	Renderer::instance();
 	matrix camera;
@@ -386,9 +444,9 @@ void multil_scene1() {
 		m->world = matrix::makeTranslation(2.0f, 0.0f, (-3 * static_cast<float>(i))) * makeRandomRotation();
 		scene.push_back(m);
 	}
-	
 
-	
+
+
 	float zoffset = 8.0f; // Initial camera Z-offset
 	float step = -0.1f;  // Step size for camera movement
 
@@ -400,7 +458,7 @@ void multil_scene1() {
 	MultilThreadControl* scv = new MultilThreadControl();
 
 
-	int all_number = 6;
+	
 	std::jthread for_produce;
 	double fenfa_count_time = 0.0;
 	double chule_count_time = 0.0;
@@ -441,7 +499,7 @@ void multil_scene1() {
 
 		scv->produce_done = false;
 		scv->active_workers = all_number;
-		auto star3 = std::chrono::high_resolution_clock::now();
+
 		Renderer::instance().canvas.checkInput();
 		//Renderer::instance().clear();
 
@@ -457,51 +515,38 @@ void multil_scene1() {
 			step *= -1.f;
 			if (++cycle % 2 == 0) {
 				end = std::chrono::high_resolution_clock::now();
+				perf_csv << cycle / 2 << ";"
+					<< std::chrono::duration<double, std::milli>(end - start).count()
+					<< "\n";
 				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
 				start = std::chrono::high_resolution_clock::now();
-				std::cout << "fenfa_count_time :" << fenfa_count_time << "ms\n";
-				fenfa_count_time = 0.0;
-				std::cout << "chule_count_time :" << chule_count_time << "ms\n";
-				chule_count_time = 0.0;
-				std::cout << "qianqian_time :" << qianqian_time << "ms\n";
-				qianqian_time = 0.0;
-				for (int i = 0; i <= all_number; i++) {
-					std::cout << tile_splite[i] << "      " << i << "\n";
-
-				}
-				for (int i = 0; i < all_number; i++) {
-
-					std::cout << scv->tile_draw_number[i] << "      " << i << "\n";
-				}
+			
 			}
 		}
 
-		
 
-		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
+
+		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) {
+			perf_csv.close();
+			break;
+		}
 		scv->setTileCount(all_number);
 
-		for (int i = 0; i < all_number; i++) {
-			//scv->tiles.push_back(SPSCQueue());
-			//scv->tiles[i].taskQueue = std::queue<TileWork>();
-
-			scv->numThreads = all_number;
-		}
 
 
-		auto end3 = std::chrono::high_resolution_clock::now();
-		qianqian_time += std::chrono::duration<double, std::milli>(end3 - star3).count();
+		scv->numThreads = all_number;
 
-		auto star1 = std::chrono::high_resolution_clock::now();
+
+
+
 		for (auto& m : scene) {
 			render_multiple(Renderer::instance(), m, camera, L, tile_splite, scv, all_number);
 
 		}
-		auto end1 = std::chrono::high_resolution_clock::now();
-		fenfa_count_time += std::chrono::duration<double, std::milli>(end1 - star1).count();
+		
 
 
-		auto star2 = std::chrono::high_resolution_clock::now();
+	
 		int tilessizenumber = 0;
 
 
@@ -514,7 +559,7 @@ void multil_scene1() {
 		scv->produce_done = true;
 		scv->stop_flag = scv->stop_flag + 1;
 		scv->stop_flag.notify_all();
-		
+
 		while (1) {
 			if (scv->active_workers == 0) {
 				break;
@@ -550,7 +595,7 @@ void multil_scene1() {
 				tile_splite[all_number - 1] -= 20;
 			}
 		}
-		
+
 		for (int i = 0; i < all_number; i++) {
 			int tile_minY;
 			int tile_maxY;
@@ -572,8 +617,7 @@ void multil_scene1() {
 			scv->tiles[i].try_push(clear_work);
 
 		}
-		auto end2 = std::chrono::high_resolution_clock::now();
-		chule_count_time += std::chrono::duration<double, std::milli>(end2 - star2).count();
+		
 
 	}
 
@@ -582,6 +626,11 @@ void multil_scene1() {
 		delete m;
 }
 void multil_scene2() {
+	int all_number = 6;
+	std::string document;
+	document = document = "../test_result/frame_time_scene2_processer_amount" + std::to_string(all_number) + "_multiple.csv";;
+	std::ofstream perf_csv(document);
+	perf_csv << "frame;ms\n";
 	vector<int>tile_splite;
 	Renderer::instance();
 	matrix camera = matrix::makeIdentity();
@@ -623,7 +672,7 @@ void multil_scene2() {
 	MultilThreadControl* scv = new MultilThreadControl();
 
 
-	int all_number =6;
+	
 	std::jthread for_produce;
 	double fenfa_count_time = 0.0;
 	double chule_count_time = 0.0;
@@ -664,18 +713,13 @@ void multil_scene2() {
 
 		scv->produce_done = false;
 		scv->active_workers = all_number;
-		
+
 		Renderer::instance().canvas.checkInput();
-		//Renderer::instance().canvas.clear();
-		auto star3 = std::chrono::high_resolution_clock::now();
-		//Renderer::instance().clear();
 		
-		//Renderer::instance().zbuffer.clear();
-		auto end3 = std::chrono::high_resolution_clock::now();
 		// Rotate each cube in the grid
 		for (unsigned int i = 0; i < rotations.size(); i++)
 			scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
-		
+
 		// Move the sphere back and forth
 		sphereOffset += sphereStep;
 		sphere->world = matrix::makeTranslation(sphereOffset, 0.f, -6.f);
@@ -684,63 +728,51 @@ void multil_scene2() {
 			sphereStep *= -1.f;
 			if (++cycle % 2 == 0) {
 				end = std::chrono::high_resolution_clock::now();
+				perf_csv << cycle / 2 << ";"
+					<< std::chrono::duration<double, std::milli>(end - start).count()
+					<< "\n";
 				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
 				start = std::chrono::high_resolution_clock::now();
 
-				std::cout << "fenfa_count_time :" << fenfa_count_time << "ms\n";
-				fenfa_count_time = 0.0;
-				std::cout << "chule_count_time :" << chule_count_time << "ms\n";
-				chule_count_time = 0.0;
-				std::cout << "qianqian_time :" << qianqian_time << "ms\n";
-				qianqian_time = 0.0;
-				for (int i = 0; i <= all_number; i++) {
-					std::cout << tile_splite[i] << "      " << i << "\n";
-					
-				}
-				for (int i = 0; i < all_number; i++) {
-					
-					std::cout << scv->tile_draw_number[i] << "      " << i << "\n";
-				}
+				
 			}
 		}
 
-		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) break;
-		scv->setTileCount(all_number);
-
-		for (int i = 0; i < all_number; i++) {
-			//scv->tiles.push_back(SPSCQueue());
-			//scv->tiles[i].taskQueue = std::queue<TileWork>();
-
-			scv->numThreads = all_number;
+		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) {
+			perf_csv.close();
+			break;
 		}
 
+		scv->setTileCount(all_number);
 
+	
+			scv->numThreads = all_number;
 		
-		qianqian_time += std::chrono::duration<double, std::milli>(end3 - star3).count();
 
-		auto star1 = std::chrono::high_resolution_clock::now();
+
+
+	
+		
 		for (auto& m : scene) {
 			render_multiple(Renderer::instance(), m, camera, L, tile_splite, scv, all_number);
 
 		}
-		auto end1 = std::chrono::high_resolution_clock::now();
-		fenfa_count_time += std::chrono::duration<double, std::milli>(end1 - star1).count();
-		scv->tiles;
+	
+
 		
-		auto star2 = std::chrono::high_resolution_clock::now();
+
+		
 		int tilessizenumber = 0;
-		
+
 
 		for (int i = 0; i < 10; i++) {
 			scv->massion_owner[i] = i;
 		}
-		for (int i = 0; i < all_number; i++) {
-			scv->tile_draw_number[i] = 0;
-		}
+
 		scv->produce_done = true;
 		scv->stop_flag = scv->stop_flag + 1;
 		scv->stop_flag.notify_all();
-	
+
 		while (1) {
 			if (scv->active_workers == 0) {
 				break;
@@ -751,15 +783,15 @@ void multil_scene2() {
 		Renderer::instance().present();
 		int maxsize = 0;
 		int rightnumber = 0;
-		double total_time=0;
-		
+		double total_time = 0;
+
 
 		if (scv->tile_draw_number[0] < scv->tile_draw_number[1]) {
 			if (tile_splite[1] + 20 < tile_splite[2]) {
 				tile_splite[1] += 20;
 			}
 		}
-		for (int i = 1; i < all_number-1; i++) {
+		for (int i = 1; i < all_number - 1; i++) {
 			if (scv->tile_draw_number[i] < scv->tile_draw_number[i + 1]) {
 				if (tile_splite[i + 1] + 20 < tile_splite[i + 2]) {
 					tile_splite[i + 1] += 20;
@@ -771,16 +803,16 @@ void multil_scene2() {
 				}
 			}
 		}
-		if (scv->tile_draw_number[all_number-1] < scv->tile_draw_number[all_number-2]) {
-			if (tile_splite[all_number-1] - 20 > tile_splite[all_number-2]) {
-				tile_splite[all_number-1] -= 20;
+		if (scv->tile_draw_number[all_number - 1] < scv->tile_draw_number[all_number - 2]) {
+			if (tile_splite[all_number - 1] - 20 > tile_splite[all_number - 2]) {
+				tile_splite[all_number - 1] -= 20;
 			}
 		}
 		TileWork clear_work;
 		for (int i = 0; i < all_number; i++) {
 			int tile_minY;
 			int tile_maxY;
-			
+
 			if (i == 0) {
 				tile_minY = 0;
 				tile_maxY = tile_splite[i + 1] - 8;
@@ -798,8 +830,251 @@ void multil_scene2() {
 			scv->tiles[i].try_push(clear_work);
 
 		}
-		auto end2 = std::chrono::high_resolution_clock::now();
-		chule_count_time += std::chrono::duration<double, std::milli>(end2 - star2).count();
+		
+
+	}
+
+
+	for (auto& m : scene)
+		delete m;
+}
+void multil_scene3() {
+	int all_number = 6;
+	std::string document;
+	document = document = "../test_result/frame_time_scene3_processer_amount" + std::to_string(all_number) + "_multiple.csv";;
+	std::ofstream perf_csv(document);
+	
+	perf_csv << "frame;ms\n";
+	vector<int>tile_splite;
+	Renderer::instance();
+	matrix camera;
+	float zoffset = 8.0f; // Initial camera Z-offset
+	float step = -0.05f;  // Step size for camera movement
+	Light L{ vec4(0.f, 1.f, 1.f, 0.f), colour(1.0f, 1.0f, 1.0f), colour(0.2f, 0.2f, 0.2f) };
+
+	std::vector<Mesh*> scene;
+
+	struct rRot { float x; float y; float z; }; // Structure to store random rotation parameters
+	std::vector<rRot> rotations;
+
+	//RandomNumberGenerator& rng = RandomNumberGenerator::getInstance();
+
+	for (unsigned int y = 0; y < 3; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 6.0f - (static_cast<float>(y) * 2.f), -4.f);
+			rRot r = { -0.5f,0.5f,0.5f };
+			
+			rotations.push_back(r);
+		}
+	}
+
+	for (unsigned int y = 0; y < 3; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), -5.f - (static_cast<float>(y) * 2.f), -4.f);
+			rRot r = { -0.5f,0.5f,0.5f };
+			rotations.push_back(r);
+		}
+	}
+	for (unsigned int y = 0; y < 3; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), 6.0f - (static_cast<float>(y) * 2.f), -12.f);
+			rRot r = { -0.5f,0.5f,0.5f };
+			rotations.push_back(r);
+		}
+	}
+
+	for (unsigned int y = 0; y < 3; y++) {
+		for (unsigned int x = 0; x < 8; x++) {
+			Mesh* m = new Mesh();
+			*m = Mesh::makeCube(1.f);
+			scene.push_back(m);
+			m->world = matrix::makeTranslation(-7.0f + (static_cast<float>(x) * 2.f), -5.f - (static_cast<float>(y) * 2.f), -12.f);
+			rRot r = { -0.5f,0.5f,0.5f };
+			rotations.push_back(r);
+		}
+	}
+
+
+	// Create a sphere and add it to the scene
+
+	auto start = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> end;
+	int cycle = 0;
+
+	bool running = true;
+	MultilThreadControl* scv = new MultilThreadControl();
+
+
+	
+	
+	
+	scv->start(all_number);
+
+	for (int i = 0; i < all_number; i++) {
+		tile_splite.emplace_back(768 / all_number * i);
+	}
+	tile_splite.emplace_back(768);
+	std::vector<int>tile_different(all_number);
+	TileWork clear_work;
+	for (int i = 0; i < all_number; i++) {
+		int tile_minY;
+		int tile_maxY;
+
+		if (i == 0) {
+			tile_minY = 0;
+			tile_maxY = tile_splite[i + 1] - 8;
+		}
+		else   if (i == all_number - 1) {
+			tile_minY = tile_splite[i] - 7;
+			tile_maxY = 767;
+		}
+		else {
+			tile_minY = tile_splite[i] - 7;
+			tile_maxY = tile_splite[i + 1] - 8;
+		}
+		clear_work.minY = tile_minY;
+		clear_work.maxY = tile_maxY;
+		scv->tiles[i].try_push(clear_work);
+
+	}
+	while (running) {
+
+
+
+		scv->produce_done = false;
+		scv->active_workers = all_number;
+
+		Renderer::instance().canvas.checkInput();
+		
+		
+		// Rotate each cube in the grid
+		camera = matrix::makeTranslation(0, 0, -zoffset); // Update camera position
+		for (unsigned int i = 0; i < rotations.size(); i++)
+			scene[i]->world = scene[i]->world * matrix::makeRotateXYZ(rotations[i].x, rotations[i].y, rotations[i].z);
+
+		// Move the sphere back and forth
+
+
+		if (zoffset < -12.f || zoffset > 8.f) {
+			step *= -1.f;
+			if (++cycle % 2 == 0) {
+				end = std::chrono::high_resolution_clock::now();
+				perf_csv << cycle / 2 << ";"
+					<< std::chrono::duration<double, std::milli>(end - start).count()
+					<< "\n";
+				std::cout << cycle / 2 << " :" << std::chrono::duration<double, std::milli>(end - start).count() << "ms\n";
+				start = std::chrono::high_resolution_clock::now();
+
+				
+			}
+		}
+
+		if (Renderer::instance().canvas.keyPressed(VK_ESCAPE)) {
+			perf_csv.close();
+			break;
+		}
+		zoffset += step;
+		scv->setTileCount(all_number);
+
+	
+
+			scv->numThreads = all_number;
+		
+
+
+
+	
+		for (auto& m : scene) {
+			render_multiple(Renderer::instance(), m, camera, L, tile_splite, scv, all_number);
+
+		}
+		
+
+		
+		int tilessizenumber = 0;
+
+
+		for (int i = 0; i < 10; i++) {
+			scv->massion_owner[i] = i;
+		}
+		for (int i = 0; i < all_number; i++) {
+			scv->tile_draw_number[i] = 0;
+		}
+		scv->produce_done = true;
+		scv->stop_flag = scv->stop_flag + 1;
+		scv->stop_flag.notify_all();
+
+		while (1) {
+			if (scv->active_workers == 0) {
+				break;
+			}
+
+		}
+		/*
+		for (int i = 1; i < all_number; i++) {
+			Renderer::instance().canvas.draw_line(tile_splite[i]);
+		}*/
+		Renderer::instance().present();
+
+		int maxsize = 0;
+		int rightnumber = 0;
+		double total_time = 0;
+
+
+		if (scv->tile_draw_number[0] < scv->tile_draw_number[1]) {
+			if (tile_splite[1] + 20 < tile_splite[2]) {
+				tile_splite[1] += 20;
+			}
+		}
+		for (int i = 1; i < all_number - 1; i++) {
+			if (scv->tile_draw_number[i] < scv->tile_draw_number[i + 1]) {
+				if (tile_splite[i + 1] + 20 < tile_splite[i + 2]) {
+					tile_splite[i + 1] += 20;
+				}
+			}
+			if (scv->tile_draw_number[i] < scv->tile_draw_number[i - 1]) {
+				if (tile_splite[i] - 20 > tile_splite[i - 1]) {
+					tile_splite[i] -= 20;
+				}
+			}
+		}
+		if (scv->tile_draw_number[all_number - 1] < scv->tile_draw_number[all_number - 2]) {
+			if (tile_splite[all_number - 1] - 20 > tile_splite[all_number - 2]) {
+				tile_splite[all_number - 1] -= 20;
+			}
+		}
+		TileWork clear_work;
+		for (int i = 0; i < all_number; i++) {
+			int tile_minY;
+			int tile_maxY;
+
+			if (i == 0) {
+				tile_minY = 0;
+				tile_maxY = tile_splite[i + 1] - 8;
+			}
+			else   if (i == all_number - 1) {
+				tile_minY = tile_splite[i] - 7;
+				tile_maxY = 767;
+			}
+			else {
+				tile_minY = tile_splite[i] - 7;
+				tile_maxY = tile_splite[i + 1] - 8;
+			}
+			clear_work.minY = tile_minY;
+			clear_work.maxY = tile_maxY;
+			scv->tiles[i].try_push(clear_work);
+
+		}
+		
 
 	}
 
@@ -813,12 +1088,15 @@ void multil_scene2() {
 // Entry point of the application
 // No input variables
 int main() {
+	
 	// Uncomment the desired scene function to run
+	
 	//scene1();
 	//scene2();
 	 //scene3();
 	//multil_scene1();
-	multil_scene2();
+	//multil_scene2();
+	 multil_scene3();
 	//sceneTest(); 
 
 

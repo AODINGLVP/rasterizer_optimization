@@ -133,12 +133,13 @@ private:
             if (!produce_done) {
                 continue;
             } 
+            auto star2 = std::chrono::high_resolution_clock::now();
             //bool clear_flag = true;
             tiles[massion_owner[tid]].try_pop(mission);
             Renderer::instance().zbuffer.tile_clear(mission.minY, mission.maxY);
             Renderer::instance().canvas.tile_clear(mission.minY, mission.maxY);
             if (massion_owner[tid] != -1) {
-                auto star2 = std::chrono::high_resolution_clock::now();
+                
                 while (tiles[massion_owner[tid]].try_pop(mission)) {
                     /*
                     if (clear_flag) {

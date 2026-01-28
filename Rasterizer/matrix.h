@@ -32,21 +32,15 @@ public:
     }
 
     // Multiply the matrix by a 4D vector
-    // Input Variables:
-    // - v: vec4 object to multiply with the matrix
-    // Returns the resulting transformed vec4
+// Input Variables:
+// - v: vec4 object to multiply with the matrix
+// Returns the resulting transformed vec4
     vec4 operator * (const vec4& v) const {
         vec4 result;
-		__m128 value = _mm_loadu_ps(v.v);
-		__m128 row0 = _mm_loadu_ps(&a[0]);
-		__m128 row1 = _mm_loadu_ps(&a[4]);
-		__m128 row2 = _mm_loadu_ps(&a[8]);
-		__m128 row3 = _mm_loadu_ps(&a[12]);
-		result.v[0] = _mm_cvtss_f32(_mm_dp_ps(row0, value, 0xF1));//dot product 
-		result.v[1] = _mm_cvtss_f32(_mm_dp_ps(row1, value, 0xF1));
-		result.v[2] = _mm_cvtss_f32(_mm_dp_ps(row2, value, 0xF1));
-		result.v[3] = _mm_cvtss_f32(_mm_dp_ps(row3, value, 0xF1));
-       
+        result[0] = a[0] * v[0] + a[1] * v[1] + a[2] * v[2] + a[3] * v[3];
+        result[1] = a[4] * v[0] + a[5] * v[1] + a[6] * v[2] + a[7] * v[3];
+        result[2] = a[8] * v[0] + a[9] * v[1] + a[10] * v[2] + a[11] * v[3];
+        result[3] = a[12] * v[0] + a[13] * v[1] + a[14] * v[2] + a[15] * v[3];
         return result;
     }
 
@@ -56,25 +50,18 @@ public:
     // Returns the resulting matrix
     matrix operator * (const matrix& mx) const {
         matrix ret;
-        __m128 rowVec1 = _mm_loadu_ps(&a[0]);
-        __m128 rowVec2 = _mm_loadu_ps(&a[4]);
-        __m128 rowVec3 = _mm_loadu_ps(&a[8]);
-        __m128 rowVec4 = _mm_loadu_ps(&a[12]);
-
-       
+        for (int row = 0; row < 4; ++row) {
             for (int col = 0; col < 4; ++col) {
-				
-				__m128 colVec = _mm_set_ps(mx.a[3 * 4 + col], mx.a[2 * 4 + col], mx.a[1 * 4 + col], mx.a[0 * 4 + col]);
-
-				ret.a[0 *4+ col] = _mm_cvtss_f32(_mm_dp_ps(rowVec1, colVec, 0xF1));
-                ret.a[1 * 4 + col] = _mm_cvtss_f32(_mm_dp_ps(rowVec2, colVec, 0xF1));
-				ret.a[2 * 4 + col] = _mm_cvtss_f32(_mm_dp_ps(rowVec3, colVec, 0xF1));
-                ret.a[3 * 4 + col] = _mm_cvtss_f32(_mm_dp_ps(rowVec4, colVec, 0xF1));
-                    
+                ret.a[row * 4 + col] =
+                    a[row * 4 + 0] * mx.a[0 * 4 + col] +
+                    a[row * 4 + 1] * mx.a[1 * 4 + col] +
+                    a[row * 4 + 2] * mx.a[2 * 4 + col] +
+                    a[row * 4 + 3] * mx.a[3 * 4 + col];
             }
-        
+        }
         return ret;
     }
+
 
     // Create a perspective projection matrix
     // Input Variables:
